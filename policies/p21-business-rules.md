@@ -8,9 +8,10 @@
 | **Status** | Draft v0.1 |
 
 Everything in the core policy applies. This addendum adds what is specific to P21
-business rules: one compiled DLL per rule, registered in P21's Business Rule
-Organizer, triggered by a P21 window event, tested in a Play environment, and then
-released to production.
+business rules: one compiled DLL per rule, linked to a field in the P21 window where it
+runs (right-click → DynaChange™ Rules → Create Business Rule), triggered by a P21
+window event, tested in a Play environment, and then released to production. Business
+Rule Organizer reviews, deactivates, and exports links; it does not create them.
 
 > This file lives in a public repository. Keep server names, database names, URLs,
 > customer IDs, and credentials out of it — and out of any example you add.
@@ -70,12 +71,12 @@ rule's first release candidate (§6):
 |---|---|
 | Purpose | The business problem, in words a non-developer understands |
 | Status | Which environments it is in, and the version in each |
-| Registration | Rule type (Validator / Converter / On Event / …), window, triggering event or field, Single/Multi-row, Synchronous/Asynchronous, the rule class name |
-| Required fields | Every field the rule reads or writes, with the alias that must be selected in Field Selector |
+| Registration | Where it is linked (window, tab and data window, linked field), the Configuration Options values as P21 names them (Rule Type, Apply Rule On, Run Type, Multi-Row, Global Rule, Trigger Rule in OE Windows), and a step-by-step "How to link it" |
+| Required fields | Every Field Selector row the rule needs: data window, field, and the exact **Pass To Rule As** alias |
 | Behavior | What it does when the rule passes, when it blocks, and when something unexpected happens (fails open or fails closed, and why) |
 | Configuration | Anything that may change without a code change (and where it lives), or an explicit "none" |
 | Build and test | Commands from a clean clone |
-| Deploy | Step by step, including where the DLL goes and the Organizer configuration |
+| Deploy | Step by step, including where the DLL goes and linking it as in Registration |
 | Rollback | Step by step (see §7) |
 | Related | Other rules touching the same window or data |
 
@@ -140,6 +141,11 @@ build stamp answers that directly:
    commit) under a different file **and** assembly name, with the **same** rule name.
 2. Trigger the rule. Check which stamp the debug log and the rule picker show.
 
+First observation (2026-10-13, before any link existed): with an old and a new DLL both
+exposing the same rule name, the Create Business Rule dialog's **Rules** tab listed two
+rows with the same Rule Name and different Assembly Names. Which one a saved link would
+run is still untested; until it is, remove the older DLL before linking.
+
 | Result | Dev-drop convention |
 |---|---|
 | B runs, link intact | Name dev drops `WPS.P21.<Rule>.<sha7>.dll`, rule name unchanged. A helper script builds them. |
@@ -195,18 +201,20 @@ be promoted unchanged and must move to the runtime switch before its first relea
 
 Every README states its rollback. The baseline:
 
-1. **Immediate:** unassign the rule in Business Rule Organizer. The window behaves as
-   if the rule doesn't exist.
-2. **Restore:** deploy the previous release's DLL from its GitHub Release and
-   reassign. Some P21 hosts lock rule DLLs once loaded, so replacing the file can
-   require a P21 service restart — plan for it.
+1. **Immediate:** in Business Rule Organizer, set the rule's **Row Status** to
+   **Inactive** and click **Apply Changes**. The window behaves as if the rule doesn't
+   exist, and the link (fields, aliases, options) is kept for the restore.
+2. **Restore:** deploy the previous release's DLL from its GitHub Release and set the
+   row back to **Active**. P21 hosts lock rule DLLs once loaded, so replacing the file
+   means stopping the P21 site or service — plan for it.
 3. Record the rollback in `CHANGELOG.md` and open an issue for the fix.
 
 ## 8. Review checklist
 
 Reviewers of a rule PR check, in addition to the core review:
 
-- [ ] Registration in the README matches what the code expects (event, fields, aliases).
+- [ ] Registration in the README matches what the code expects (linked field, Field
+      Selector rows, Pass To Rule As aliases, Configuration Options).
 - [ ] Every field read is null/blank-safe and trimmed where P21 pads fixed-width values.
 - [ ] Failure behavior is deliberate and documented. Rules on print/form paths **fail
       open** (an error must never stop a document printing). Validators state whether
