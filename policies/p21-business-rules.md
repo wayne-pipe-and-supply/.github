@@ -53,9 +53,10 @@ environments before production.
 The core policy's [§9](version-control.md#9-what-never-goes-in-git) applies, with one
 exception:
 
-- **Allowed:** the pinned `P21.Extensions` `.nupkg` in `packages/`. It is a licensed
-  Epicor package that isn't on nuget.org, so the repository vendors exactly one
-  pinned copy to stay buildable. It is a dependency, not build output.
+- **Allowed:** the pinned Epicor `.nupkg` files in `packages/`: `P21.Extensions` and
+  its dependency `P21.Popup.Model`. They are licensed packages that aren't on
+  nuget.org, so the repository vendors pinned copies to stay buildable from a clean
+  clone and in CI. They are dependencies, not build output.
 - **Never:** `bin/`, `obj/`, loose `P21.Extensions.dll` or other DLLs, `.pdb` files,
   rule log output, captured form data streams or field dumps containing customer
   data, decompiled Epicor source, credentials helpers.
