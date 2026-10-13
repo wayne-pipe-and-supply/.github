@@ -1,0 +1,42 @@
+name: Bug report
+description: Something isn't working the way it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Don't paste passwords, connection strings, or customer data into this form.
+        Committed a secret by accident? Follow SECURITY.md instead of filing an issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you saw, including any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Enter …
+        3. Click …
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment and version
+      description: Where it happened (e.g. Play, Play2, Production) and the version/tag, if known.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Logs (redacted), screenshots without customer data, how often it happens.

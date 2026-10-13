@@ -1,0 +1,30 @@
+name: Change request
+description: New behavior, or a change to existing behavior.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The business need, in plain language. Who is affected?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should happen?
+      description: The behavior you want. Examples help.
+    validations:
+      required: true
+  - type: input
+    id: requested-by
+    attributes:
+      label: Requested by
+      description: Person or department asking for it.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How will we know it's done?
+      placeholder: |
+        - When … then …
+        - When … then …

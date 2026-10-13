@@ -1,0 +1,6 @@
+{
+  "name": "PR title check (Conventional Commits)",
+  "description": "Fails the pull request check when the title isn't a Conventional Commit line. Required by the org Version Control Standards.",
+  "iconName": "octicon git-pull-request",
+  "categories": ["Automation"]
+}
