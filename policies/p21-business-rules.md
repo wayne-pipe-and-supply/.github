@@ -9,8 +9,8 @@
 
 Everything in the core policy applies. This addendum adds what is specific to P21
 business rules: one compiled DLL per rule, registered in P21's Business Rule
-Organizer, triggered by a P21 window event, and promoted through the Play
-environments before production.
+Organizer, triggered by a P21 window event, tested in a Play environment, and then
+released to production.
 
 > This file lives in a public repository. Keep server names, database names, URLs,
 > customer IDs, and credentials out of it — and out of any example you add.
@@ -64,7 +64,7 @@ exception:
 ## 4. README
 
 The template's README has these sections. All of them must be filled in before the
-rule is deployed to Play2:
+rule's first release candidate (§6):
 
 | Section | Contents |
 |---|---|
@@ -115,12 +115,12 @@ The template's `Directory.Build.targets` does this automatically; don't remove i
 
 - `+a1b2c3d` maps straight to the source:
   `https://github.com/wayne-pipe-and-supply/<repo>/commit/a1b2c3d`.
-- **`.dirty` builds are allowed in Play only.** Their source isn't in Git, so they
-  can't be reproduced. Before dropping a build into Play that you may want to come
-  back to, commit it (`git commit -am "wip: …"` is fine — work-in-progress commits
-  are squashed away at merge).
-- **Play2 and production run only CI-built release artifacts.** The `release` workflow
-  refuses to attach a DLL that isn't stamped with the tagged commit, or that is dirty.
+- **`.dirty` builds are allowed in the test environments (Play, Play2) only.** Their
+  source isn't in Git, so they can't be reproduced. Before dropping a build you may
+  want to come back to, commit it (`git commit -am "wip: …"` is fine —
+  work-in-progress commits are squashed away at merge).
+- **Production runs only CI-built release artifacts.** The `release` workflow refuses
+  to attach a DLL that isn't stamped with the tagged commit, or that is dirty.
 - Audit any rules folder in one line:
 
   ```powershell
@@ -130,13 +130,13 @@ The template's `Directory.Build.targets` does this automatically; don't remove i
 
 ### 5.2 Dev drops while the host holds a DLL lock
 
-*Open item, pending a Play test.* The P21 host locks a rule DLL once loaded, so
-iterating in Play means dropping in a new build alongside the locked one instead of
-restarting the middleware. Because links bind to the rule **name**, the open question
+*Open item, pending a test.* The P21 host locks a rule DLL once loaded, so iterating
+in a test environment means dropping in a new build alongside the locked one instead
+of restarting the middleware. Because links bind to the rule **name**, the open question
 is how the host behaves when two DLLs in the folder expose the same rule name. The
 build stamp answers that directly:
 
-1. In Play, with build A of a rule loaded and linked, drop build B (a different
+1. In Play or Play2, with build A of a rule loaded and linked, drop build B (a different
    commit) under a different file **and** assembly name, with the **same** rule name.
 2. Trigger the rule. Check which stamp the debug log and the rule picker show.
 
@@ -145,43 +145,48 @@ build stamp answers that directly:
 | B runs, link intact | Name dev drops `WPS.P21.<Rule>.<sha7>.dll`, rule name unchanged. A helper script builds them. |
 | A keeps running, or an error/ambiguity | Dev drops need a restart, or a dev-only rule name. Decide which, with the cost of re-linking in mind. |
 
-Release artifacts (Play2 and production) keep the plain `WPS.P21.<Rule>.dll` name either
-way; there, a version change is deployed with a service restart in a maintenance
-window.
+Release artifacts (release candidates and releases) keep the plain
+`WPS.P21.<Rule>.dll` name either way; in production, a version change is deployed with
+a service restart in a maintenance window.
 
 ## 6. Environments and promotion
 
+**Play** and **Play2** are parallel test environments. Neither is a stage after the
+other: a rule is developed and tested in whichever one the work uses, then released
+to production. Nothing is promoted from Play to Play2.
+
 | Environment | Purpose | What may be deployed |
 |---|---|---|
-| **Play** | Development and experiments | Any build of a working branch |
-| **Play2** | Pre-production canary; runs the same P21 build as production | Only a **pre-release** artifact: `vX.Y.Z-rc.N` |
-| **Production** | Live | Only a **release** artifact: `vX.Y.Z`, the same DLL that passed Play2 |
+| **Play**, **Play2** | Development and testing | Any build: working-branch builds while developing; the **pre-release** artifact `vX.Y.Z-rc.N` for the final check before production |
+| **Production** | Live | Only a **release** artifact: `vX.Y.Z`, the same DLL as the release candidate that passed testing |
 
-Promotion steps:
+Release steps:
 
-1. Develop on a working branch; deploy branch builds to **Play** as often as needed.
+1. Develop on a working branch; deploy branch builds to Play or Play2 as often as
+   needed.
 2. Open the PR. Merge once reviewed and the unit tests pass.
 3. Release PR: bump `<Version>`, move `CHANGELOG.md` entries under the new version.
    Merge.
 4. Create a GitHub **pre-release** `vX.Y.Z-rc.1` from `main`. The template's `release`
    workflow builds the DLL and attaches it with a SHA-256 checksum. Deploy **that
-   file** to **Play2**.
-5. Run the canary checks in the PR template. Record the results in the pre-release
-   notes. If changes are needed, fix on a branch and cut `-rc.2`.
+   file** to the test environment (Play or Play2).
+5. Run the checks in the PR template against it. Record the environment and results in
+   the pre-release notes. If changes are needed, fix on a branch and cut `-rc.2`.
 6. Confirm debug logging will be off in production. Logging must be switched at
    **runtime**, not compiled in, because the production DLL is the same file that
-   ran in Play2 (see §6.1).
+   was tested (see §6.1).
 7. Create the GitHub **release** `vX.Y.Z` on the same commit. The `release` workflow
-   attaches **the same DLL** that passed Play2 — it refuses if there is no `-rc` or if
-   the commits differ. Deploy it to **production**.
-8. Record the deployment: add the environment and date under the version's entry in
-   `CHANGELOG.md`, e.g. `Deployed: Play2 2026-10-20, Production 2026-10-27`.
+   attaches **the same DLL** as the tested release candidate — it refuses if there is
+   no `-rc` or if the commits differ. Deploy it to **production**.
+8. Record the deployment: add the test environment and production dates under the
+   version's entry in `CHANGELOG.md`, e.g.
+   `Tested: Play 2026-10-20 (rc.1). Deployed: Production 2026-10-27`.
 
 ### 6.1 Debug logging
 
 Per-execution debug logs are encouraged in Play and Play2 and forbidden in
-production. Because the same DLL moves between them, the switch must be outside the
-DLL. The template's `DebugLog` logs only when a marker file named
+production. Because the same DLL goes from testing to production, the switch must be
+outside the DLL. The template's `DebugLog` logs only when a marker file named
 `<AssemblyName>.debug` sits next to the rule DLL: create it in Play/Play2, never in
 production. A rule that uses a compile-time flag (`bool IsDebugModeOn = true`) can't
 be promoted unchanged and must move to the runtime switch before its first release.
